@@ -1,0 +1,116 @@
+library(quantmod)
+library(xts)
+library(MASS)
+library(ggplot2)
+
+#getting sample and converting to xts(for r)
+data("sample_matrix")
+myxts <- as.xts(sample_matrix, desc = "myxts")
+
+#getting time or just data
+timeInfo <- index(myxts)
+dataInfo <- coredata(myxts)
+
+#checking the class of something and then converting to POSIX
+
+class(timeI)
+xtsIndex  <- as.POSIXct(timeI, format = "%m/%d/%Y")
+xtsPrices <- xts(x[,-1], xtsIndex)
+
+#modelling brownian motion
+
+bm <- cumsum(rnorm(1000,0,1))
+bm <- bm - bm[1]
+plot(bm, main = "Brownian Motion", col = "blue", type = "l")
+
+#testing if brownian by looking for covariance between W
+acf(diff(bm), main = "Autocorrelation of Wt")
+
+# equals 0 so no correlatio , plotting to see if normally distributes
+
+par(mfrow = c(2,1))
+hist(diff(bm), col = "orange", breaks = 100, main = "Wt-s Distribution")
+qqnorm(diff(bm))
+qqline(diff(bm))
+
+hist(run4)
+mean(run4)
+
+#using brownian motion on stocks
+#load quantmod and get price data
+library(quantmod)
+getSymbols("AAPL")
+price_AAPL <- AAPL[,6]
+plot(price_AAPL, main = "The price of AAPL")
+
+#we want standard deviation and mean, so we log transform and look at differences instead
+
+returns_AAPL <- diff(log(price_AAPL))
+plot(returns_AAPL, main = "AAPL % returns", col = "navyblue")
+hist(returns_AAPL, breaks = 100, col="brown")
+
+#so now normal, checking for correlation like before, + mean and sd
+
+acf(returns_AAPL[-1], main = "Autocorrelation plot of returns")
+
+mR  <- mean(returns_AAPL[-1])
+sdR <- sd(returns_AAPL[-1])
+
+#simulating a stock price, assuming that price is lognormal
+
+N     <- 1000
+mu    <- 0.0010
+sigma <- 0.025
+
+price  <- c(100, rep(N-1))
+for(i in 2:N)
+  price[i] <- price[i-1] * exp(rnorm(1, mu, sigma))
+
+plot(price, type = "l", col = "brown", main = "Simulated Stock Price")
+
+#portfolio simulation
+
+getSymbols(c("AAPL", "QQQ", "SPY", "GOOG", "CVX"))
+
+par(mfrow = c(3,2))
+plot(AAPL[,6], main = "AAPL")
+plot(QQQ[,6], main = "QQQQ")
+plot(SPY[,6], main = "SPY")
+plot(GOOG[,6], main = "GOOG")
+plot(CVX[,6], main = "CVX")
+par(mfrow = c(1,1))
+
+#combining the prices
+pM <- cbind(AAPL[,6], QQQ[,6], SPY[,6], GOOG[,6], CVX[,6])
+
+#getting returns
+rM <-  apply(pM,2,function(x) diff(log(x)))
+
+#pair plots
+pairs(coredata(rM))
+
+#covariance of matrix
+covR <- cov(rM)
+
+#using this to simulate some data
+meanV <- apply(rM, 2, mean)
+rV    <- mvrnorm(n = nrow(rM), mu = meanV, Sigma = covR)
+
+#calculating mean price going back
+p0 <- apply(pM,2,mean)
+sPL <- list()
+for(i in 1:ncol(rM)){
+  sPL[[i]] <-round(p0[i]*exp(cumsum(rV[,i])),2) 
+}
+
+#plot simulated prices
+par(mfrow = c(3,2)) 
+plot(sPL[[1]],main="AAPLsim",type="l")
+plot(sPL[[2]], main = "QQQQ sim",type = "l")
+plot(sPL[[3]], main = "SPY sim", type = "l") 
+plot(sPL[[4]], main = "GOOG sim",type = "l") 
+plot(sPL[[5]], main = "CVX sim", type = "l")
+ 
+
+
+
